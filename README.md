@@ -16,7 +16,7 @@ With support for **multi-platforms**, this app enables seamless use across both 
 - **Sales Processing**: Effortless product addition, discount application, and payment processing.
 - **Inventory Management**: Track, add, and remove products, view stock levels in real-time.
 - **Reports**: Generate detailed sales, performance, and inventory reports.
-- **Authentication**: Secure login with biometric support (fingerprint and face recognition).
+- **Authentication**: Secure login authentication.
 
 ## Technologies Used 💻
 
