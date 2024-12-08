@@ -43,3 +43,30 @@ flutter run -d windows   # For Windows
 flutter run -d macos     # For macOS
 flutter run -d linux     # For Linux
 
+## User Roles & Stories 📋
+### 1. Cashier
+Login: Login with username/password or biometric authentication.
+Sales Processing: Add/remove items, apply discounts, and complete payments.
+Transaction History: View all completed sales transactions.
+### 2. Manager
+View Reports: Access detailed sales and inventory reports.
+Employee Metrics: Track cashier performance, manage refunds.
+Inventory Management: View and adjust stock levels.
+### 3. Admin
+System Configuration: Set up taxes, payment methods, and other system-wide settings.
+User Management: Add, remove, or edit user roles (Cashiers, Managers).
+Product Management: Manage products and inventory settings.
+
+
+Screenshots 📱💻
+
+
+How to Contribute 🤝
+We welcome contributions! If you’d like to contribute to this project, follow these steps:
+
+Fork the repository.
+Create a new branch.
+Make your changes and commit them.
+Push the changes to your fork.
+Open a pull request.
+Please make sure your code adheres to the project’s style guide and includes tests for new features.
