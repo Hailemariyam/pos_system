@@ -54,6 +54,9 @@ dependencies:
   fl_chart: ^0.69.2
   google_fonts: ^6.2.1
   responsive_framework: ^0.1.0
+  
+  mobile_scanner: ^6.0.2
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -70,7 +73,7 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
-# The following section is specific to Flutter packages.
+# The following section is specific to Flutter packages. 
 flutter:
 
   # The following line ensures that the Material Icons font is

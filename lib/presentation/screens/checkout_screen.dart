@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pos_sales_app/bloc/cartcubit.dart';
 import 'package:pos_sales_app/models/cart_item_model.dart';
+import 'package:pos_sales_app/presentation/screens/reciept_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   @override
@@ -9,11 +10,7 @@ class CheckoutScreen extends StatefulWidget {
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _paymentController = TextEditingController();
-  final TextEditingController _discountController = TextEditingController();
-  String _selectedPaymentMethod = 'Credit Card';
-  bool _termsAccepted = false;
+  String? _selectedPaymentMethod;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +28,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             );
           }
 
+          double totalTax = 0;
+          double finalPrice = 0;
+          cartItems.forEach((item) {
+            totalTax +=
+                item.quantity * item.product.price * item.product.taxRate;
+            finalPrice += item.quantity * item.product.price;
+          });
+          finalPrice += totalTax;
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -47,6 +53,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   itemCount: cartItems.length,
                   itemBuilder: (context, index) {
                     final cartItem = cartItems[index];
+                    final tax = cartItem.product.taxRate *
+                        cartItem.product.price *
+                        cartItem.quantity;
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 5),
                       child: ListTile(
@@ -58,7 +67,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                         title: Text(cartItem.product.name),
                         subtitle: Text(
-                          '${cartItem.quantity} x \$${cartItem.product.price.toStringAsFixed(2)}',
+                          '${cartItem.quantity} x \$${cartItem.product.price.toStringAsFixed(2)} (Tax: \$${tax.toStringAsFixed(2)})',
                         ),
                         trailing: Text(
                           '\$${(cartItem.quantity * cartItem.product.price).toStringAsFixed(2)}',
@@ -72,12 +81,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Total:',
+                      'Total Price:',
                       style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     Text(
                       '\$${context.read<CartCubit>().totalPrice.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total Tax:',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '\$${totalTax.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Final Price:',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal),
+                    ),
+                    Text(
+                      '\$${finalPrice.toStringAsFixed(2)}',
                       style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -87,121 +130,56 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 const SizedBox(height: 20),
                 const Text(
-                  'Shipping Information',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _addressController,
-                  decoration: InputDecoration(
-                    labelText: 'Shipping Address',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    hintText: 'Enter your shipping address',
+                  'Select Payment Method',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Payment Method',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
                 const SizedBox(height: 10),
-                DropdownButton<String>(
-                  value: _selectedPaymentMethod,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedPaymentMethod = newValue!;
-                    });
-                  },
-                  items: <String>['Credit Card', 'PayPal', 'Cash on Delivery']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Discount Code (Optional)',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _discountController,
-                  decoration: InputDecoration(
-                    labelText: 'Enter Discount Code',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                ListTile(
+                  title: const Text('Cash'),
+                  leading: Radio<String>(
+                    value: 'Cash',
+                    groupValue: _selectedPaymentMethod,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPaymentMethod = value;
+                      });
+                    },
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _termsAccepted,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          _termsAccepted = value!;
-                        });
-                      },
-                    ),
-                    const Text('I accept the terms and conditions'),
-                  ],
+                ListTile(
+                  title: const Text('ATM (POS Machine)'),
+                  leading: Radio<String>(
+                    value: 'ATM',
+                    groupValue: _selectedPaymentMethod,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedPaymentMethod = value;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
                   ),
-                  onPressed: _termsAccepted
-                      ? () {
-                          // Proceed with the order confirmation logic
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Order Confirmation'),
-                              content: const Text(
-                                  'Do you want to place this order?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    // Implement the logic for placing the order
-                                    Navigator.pop(context);
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Order Placed!'),
-                                        content: const Text(
-                                            'Your order has been successfully placed.'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context),
-                                            child: const Text('OK'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                  child: const Text('Place Order'),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      : null,
-                  child: const Text('Confirm and Place Order'),
+                  onPressed: _selectedPaymentMethod == null
+                      ? null
+                      : () {
+                          _showReceipt(
+                              context, cartItems, totalTax, finalPrice);
+                        },
+                  child: const Text(
+                    'Complete Payment',
+                    style: TextStyle(fontSize: 18),
+                  ),
                 ),
               ],
             ),
@@ -210,4 +188,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
     );
   }
+
+  void _showReceipt(BuildContext context, List<CartItem> cartItems,
+      double totalTax, double finalPrice) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReceiptScreen(
+          cartItems: cartItems,
+          totalTax: totalTax,
+          finalPrice: finalPrice,
+        ),
+      ),
+    );
+  }
 }
+

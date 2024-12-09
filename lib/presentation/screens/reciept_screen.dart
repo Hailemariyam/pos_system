@@ -1,171 +1,167 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pos_sales_app/bloc/cartcubit.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:flutter/services.dart';
 import 'package:pos_sales_app/models/cart_item_model.dart';
+import 'package:printing/printing.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
-class CashierScreen extends StatefulWidget {
-  @override
-  _CashierScreenState createState() => _CashierScreenState();
-}
+class ReceiptScreen extends StatelessWidget {
+  final List<CartItem> cartItems;
+  final double totalTax;
+  final double finalPrice;
 
-class _CashierScreenState extends State<CashierScreen> {
-  String _selectedPaymentMethod = 'Cash'; // Default payment method
-  bool _isPaid = false; // To track if payment is done
+  const ReceiptScreen({
+    required this.cartItems,
+    required this.totalTax,
+    required this.finalPrice,
+  });
+
+  Future<void> _generateAndPrintPDF(BuildContext context) async {
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Center(
+                child: pw.Text(
+                  'Receipt',
+                  style: pw.TextStyle(
+                      fontSize: 24, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text(
+                'Items Purchased:',
+                style:
+                    pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 10),
+              ...cartItems.map(
+                (item) => pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(item.product.name),
+                    pw.Text(
+                        '${item.quantity} x \$${item.product.price.toStringAsFixed(2)}'),
+                  ],
+                ),
+              ),
+              pw.Divider(),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Total Tax:'),
+                  pw.Text('\$${totalTax.toStringAsFixed(2)}'),
+                ],
+              ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Final Price:'),
+                  pw.Text('\$${finalPrice.toStringAsFixed(2)}'),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Center(
+                child: pw.BarcodeWidget(
+                  data: 'Transaction ID: XYZ123', // Replace with actual data
+                  barcode: pw.Barcode.qrCode(),
+                  width: 100,
+                  height: 100,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save());
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cashier - Process Payment'),
-        centerTitle: true,
+        title: const Text('Receipt'),
         backgroundColor: Colors.teal,
       ),
-      body: BlocBuilder<CartCubit, List<CartItem>>(
-        builder: (context, cartItems) {
-          if (cartItems.isEmpty) {
-            return const Center(
-              child: Text('No items in the cart!'),
-            );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Receipt',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: ListView.builder(
+                itemCount: cartItems.length,
+                itemBuilder: (context, index) {
+                  final cartItem = cartItems[index];
+                  return ListTile(
+                    title: Text(cartItem.product.name),
+                    subtitle: Text(
+                      '${cartItem.quantity} x \$${cartItem.product.price.toStringAsFixed(2)}',
+                    ),
+                    trailing: Text(
+                      '\$${(cartItem.quantity * cartItem.product.price).toStringAsFixed(2)}',
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Order Summary',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  'Total Tax:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 10),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: cartItems.length,
-                  itemBuilder: (context, index) {
-                    final cartItem = cartItems[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 5),
-                      child: ListTile(
-                        leading: Image.network(
-                          cartItem.product.imageUrl,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                        ),
-                        title: Text(cartItem.product.name),
-                        subtitle: Text(
-                          '${cartItem.quantity} x \$${cartItem.product.price.toStringAsFixed(2)}',
-                        ),
-                        trailing: Text(
-                          '\$${(cartItem.quantity * cartItem.product.price).toStringAsFixed(2)}',
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Total Amount:',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      '\$${context.read<CartCubit>().totalPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.teal),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Select Payment Method',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                DropdownButton<String>(
-                  value: _selectedPaymentMethod,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedPaymentMethod = newValue!;
-                    });
-                  },
-                  items: <String>['Cash', 'ATM POS Machine']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
-                  onPressed: _isPaid
-                      ? null
-                      : () {
-                          setState(() {
-                            _isPaid = true; // Mark the payment as completed
-                          });
-
-                          showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Payment Confirmed'),
-                              content: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text('Payment Method:'),
-                                  Text(_selectedPaymentMethod),
-                                  const SizedBox(height: 10),
-                                  const Text('Receipt:'),
-                                  const SizedBox(height: 10),
-                                  // Order summary and receipt display
-                                  for (var item in cartItems)
-                                    Text(
-                                      '${item.product.name} x${item.quantity} - \$${(item.quantity * item.product.price).toStringAsFixed(2)}',
-                                    ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    'Total: \$${context.read<CartCubit>().totalPrice.toStringAsFixed(2)}',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    // Clear the cart after transaction
-                                    context.read<CartCubit>().clearCart();
-                                  },
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                  child: _isPaid
-                      ? const Text('Payment Complete')
-                      : const Text('Confirm Payment'),
+                Text(
+                  '\$${totalTax.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-          );
-        },
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Final Price:',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '\$${finalPrice.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Center(
+              child: QrImageView(
+                data:
+                    'Transaction ID: XYZ123', // Replace with actual transaction details
+                size: 100,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+              onPressed: () => _generateAndPrintPDF(context),
+              child: const Text('Print Receipt'),
+            ),
+          ],
+        ),
       ),
     );
   }

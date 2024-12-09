@@ -6,13 +6,40 @@ import 'package:pos_sales_app/models/cart_item_model.dart';
 import 'package:pos_sales_app/models/product_model.dart';
 import 'package:pos_sales_app/presentation/product_detail.dart';
 import 'package:pos_sales_app/presentation/screens/cart_screen.dart';
+import 'package:mobile_scanner/mobile_scanner.dart'; // Import MobileScanner package
 
-class ProductListScreen extends StatelessWidget {
+class ProductListScreen extends StatefulWidget {
+  @override
+  _ProductListScreenState createState() => _ProductListScreenState();
+}
+
+class _ProductListScreenState extends State<ProductListScreen> {
+  String _searchQuery = '';
+
+  // Function to scan barcode using MobileScanner
+  Future<void> _scanBarcode() async {
+    final barcode = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BarcodeScannerScreen(),
+      ),
+    );
+
+    if (barcode != null && barcode is String) {
+      setState(() {
+        _searchQuery = barcode; // Set the search query to the scanned barcode
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+          backgroundColor: Colors.teal, // Set teal background color
+
         title: const Text('POS System'),
+         
         actions: [
           BlocBuilder<CartCubit, List<CartItem>>(
             builder: (context, cartItems) {
@@ -48,6 +75,36 @@ class ProductListScreen extends StatelessWidget {
             },
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    onChanged: (query) {
+                      setState(() {
+                        _searchQuery = query;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search by name, barcode, or SKU',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.camera_alt),
+                  onPressed: _scanBarcode, // Trigger barcode scanner
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: ValueListenableBuilder<Box<Product>>(
         valueListenable: Hive.box<Product>('productBox').listenable(),
@@ -55,30 +112,39 @@ class ProductListScreen extends StatelessWidget {
           if (box.isEmpty) {
             return Center(child: Text('No products available'));
           }
-          final products = box.values.toList();
+
+          final products = box.values
+              .where((product) =>
+                  product.name
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()) ||
+                  product.barcode
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()) ||
+                  product.sku
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()))
+              .toList();
 
           return LayoutBuilder(
             builder: (context, constraints) {
-              // Determine the number of columns based on screen width
-              int crossAxisCount = 2; // Default for mobile
-              double childAspectRatio = 0.58; // Default aspect ratio for mobile
+              int crossAxisCount = 2;
+              double childAspectRatio = 0.58;
 
               if (constraints.maxWidth > 1200) {
-                // Desktop size (large screens)
-                crossAxisCount = 4; // More columns for large screens
-                childAspectRatio = 0.6; // Adjust aspect ratio for desktop
+                crossAxisCount = 4;
+                childAspectRatio = 0.6;
               } else if (constraints.maxWidth > 600) {
-                // Tablet size (medium screens)
-                crossAxisCount = 3; // Columns for tablets
-                childAspectRatio = 0.7; // Adjust aspect ratio for tablets
+                crossAxisCount = 3;
+                childAspectRatio = 0.7;
               }
 
               return GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount, // Dynamic number of columns
-                  crossAxisSpacing: 10, // Horizontal spacing between items
-                  mainAxisSpacing: 10, // Vertical spacing between items
-                  childAspectRatio: childAspectRatio, // Dynamic aspect ratio
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: childAspectRatio,
                 ),
                 itemCount: products.length,
                 itemBuilder: (context, index) {
@@ -86,7 +152,6 @@ class ProductListScreen extends StatelessWidget {
 
                   return GestureDetector(
                     onTap: () {
-                      // Navigate to the product detail screen
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -100,11 +165,10 @@ class ProductListScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Display the product image
                           Image.asset(
                             product.imageUrl,
                             fit: BoxFit.cover,
-                            height: 120, // Adjust height as needed
+                            height: 120,
                             width: double.infinity,
                           ),
                           Padding(
@@ -135,9 +199,7 @@ class ProductListScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          // Use Spacer or Expanded to prevent overflow
                           Spacer(),
-                          // Add to Cart button
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: IconButton(
@@ -155,6 +217,23 @@ class ProductListScreen extends StatelessWidget {
               );
             },
           );
+        },
+      ),
+    );
+  }
+}
+
+class BarcodeScannerScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Scan Barcode')),
+      body: MobileScanner(
+        onDetect: (capture) {
+          final List<Barcode> barcodes = capture.barcodes;
+          if (barcodes.isNotEmpty) {
+            Navigator.pop(context, barcodes.first.rawValue);
+          }
         },
       ),
     );
